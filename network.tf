@@ -86,4 +86,14 @@ resource "oci_core_security_list" "foundry_security_list" {
     }
   }
 
+  ingress_security_rules {
+    protocol  = "6"
+    source    = "0.0.0.0/0"
+    stateless = true
+
+    tcp_options {
+      max = "81"
+      min = "81"
+    }
+  }
 }
