@@ -62,3 +62,9 @@ variable "alert_rule_recipients" {
   description = "Email address to be notified if budget is exceeded"
   type        = string
 }
+
+variable "ingress_ports" {
+  description = "List of ports to allow through the security group"
+  type        = list(number)
+  default     = [22, 80, 443, 30000]
+}

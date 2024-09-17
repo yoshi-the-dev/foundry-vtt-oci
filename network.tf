@@ -42,58 +42,18 @@ resource "oci_core_security_list" "foundry_security_list" {
     destination = "0.0.0.0/0"
   }
 
-  ingress_security_rules {
-    protocol  = "6"
-    source    = "0.0.0.0/0"
-    stateless = true
+  dynamic "ingress_security_rules" {
+    for_each = var.ingress_ports
 
-    tcp_options {
-      max = "22"
-      min = "22"
-    }
-  }
+    content {
+      protocol  = "6"  # TCP
+      source    = "0.0.0.0/0"
+      stateless = true
 
-  ingress_security_rules {
-    protocol  = "6"
-    source    = "0.0.0.0/0"
-    stateless = true
-
-    tcp_options {
-      max = "80"
-      min = "80"
-    }
-  }
-
-  ingress_security_rules {
-    protocol  = "6"
-    source    = "0.0.0.0/0"
-    stateless = true
-
-    tcp_options {
-      max = "443"
-      min = "443"
-    }
-  }
-
-  ingress_security_rules {
-    protocol  = "6"
-    source    = "0.0.0.0/0"
-    stateless = true
-
-    tcp_options {
-      max = "30000"
-      min = "30000"
-    }
-  }
-
-  ingress_security_rules {
-    protocol  = "6"
-    source    = "0.0.0.0/0"
-    stateless = true
-
-    tcp_options {
-      max = "81"
-      min = "81"
+      tcp_options {
+        max = ingress_security_rules.value
+        min = ingress_security_rules.value
+      }
     }
   }
 }
