@@ -46,7 +46,7 @@ resource "oci_core_security_list" "foundry_security_list" {
     for_each = var.ingress_ports
 
     content {
-      protocol  = "6"  # TCP
+      protocol  = "6" # TCP
       source    = "0.0.0.0/0"
       stateless = true
 

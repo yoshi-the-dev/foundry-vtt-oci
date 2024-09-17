@@ -1,41 +1,117 @@
-# Oracle Cloud Infrastructure (OCI) setup for Foundry VTT
-This terraform code is meant to automatically build out the infrastructure you need to run a Foundry VTT instance in OCI. It was created to duplicate the instructions for creating an Always Free OCI Foundry VTT installation found at https://foundryvtt.wiki/en/setup/hosting/always-free-oracle. At this point the code DOES NOT install or configure any software on the Ubuntu VM that it creates; you'll need to follow the instructions linked above for guidance on that. 
-While I've attempted to configure this so that it conforms to the "Always Free Tier" requirements of OCI, *you are fully responsible for ensuring that no costs will be incurred*.  It is recommended to conduct a Cost Analysis after this code is deployed to ensure that all services are Always Free.  An OCI Budget and Alarm are set up as part of this code to facilitate this.  
+# OCI setup for Foundry VTT
+
+# Why this
+This Terraform setup expects to provide an easy way to generate an automatic funcional cloud-hosted Foundry following the [official FoundryVTT team recomendations](https://foundryvtt.wiki/en/setup/hosting/always-free-oracle).
+
+### Credits
+Based on https://github.com/MrDionysus/foundry-vtt-oci-terraform implementation. Updated the values, improved the documentation for less-familiar users and added some other things like a volume backup system, the possibility of an automatic setup, and some other interesting configurable variables.
 
 # Prerequisites
  - A valid license for [Foundry VTT](https://foundryvtt.com).
  - A new [Oracle OCI account](https://cloud.oracle.com).
- - A local installation of Terraform 1.0.8+.  Installation instructions may be found at https://learn.hashicorp.com/tutorials/terraform/install-cli+
- - General understanding of Terraform, Cloud Infrastructure, Networking, and your Operating System.  I did all of this from a Linux workstation, it should work just fine in a Windows environment as well.
+ - A local installation of Terraform. Installation details can be found on the [official page](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli).
 
 # Usage
-1. Clone this repo to your system
-2. Create an SSH key to use to access your instance.  This key pair will be used later to allow you to SSH into your new server so that you can set up the Foundry VTT software.  Store it wherever you store your SSH keys:
-  - ssh-keygen -t rsa -N "" -b 2048 -C <your-ssh-key-name> -f <your-ssh-key-name>
-3. Set up your system and Terraform for OCI - https://docs.oracle.com/en-us/iaas/developer-tutorials/tutorials/tf-provider/01-summary.htm
-  - Under "1. Prepare", follow "Create RSA Keys". Once you add them to Oracle, save the information under [DEFAULT], as you'll use that in a moment. NOTE: This is a separate key from the one you created in step 2.  You'll need them both.
-4. Edit the "oci-vars.tfvars" file, supplying the values from the [DEFAULT] entry you copied in the previous step.  Additionally, you'll find configuration settings for the OCI Shape, boot volume, memory, OCPUs, Ubuntu image ID, and ssh_public_key path (this is the path for the key you created in step 2).  The settings in the example file will create a VM with an 80G disk, 2 OCPUs, and 12G Memory.  This uses up half of the available processor and memory resources of the Always Free Tier; adjust them according to your needs if you're trying to fit more stuff into this account.
-5. Run "terraform init", followed by "terraform apply -var-file=oci-vars.tfvars".  You'll have to answer "yes" for the proposed changes to go through.
+Before starting, you need to clone this repo to your system.
+```bash
+git clone https://github.com/yoshichulo/foundry-vtt-oci.git
+```
 
-# What will probably happen
-In my experience, it's hard to get OCI Free Tier resources - you'll probably get an error that says "Out of Capacity" when Terraform tries to create your compute instance.  The good news is that it should create the rest of the infrastructure, so you just need the compute resource.  If you're using bash, you can run the included "keeptrying.sh" script, which will try to create the compute resource every 60 seconds and will continue until it finds the word "Apply" in the results, which will happen once your instance gets created.  Mine ran for ~2 hours and was able to secure me an instance, your mileage may vary.
+### Preparing the SSH keys
+You need to create Create an SSH key to use to access your instance. This key pair will be used later to allow you to SSH into your new server so that you can set up the Foundry VTT software. Store it wherever you store your SSH keys (typically `%USERPROFILE%/.ssh` on `Windows` or `~./ssh` on `Linux`).
+```bash
+ssh-keygen -t rsa -N "" -b 2048 -C <your-ssh-key-name> -f <your-ssh-key-name>
+```
 
-# Terraform .tf files overview
-availability-domains.tf:
-  - creates a simple data resource for your availability domains that will be used by the other Terraform files
-budget-monitor.tf:
-  - creates a budget with a $1 threshold and an alert that will email the address included in oci-vars.tfvars
-compute.tf:
-  - creates the compute resource
-network.tf:
-  - creates a networking infrastructure that will create a subnet (10.0.0.0/24) to hold your compute resource, an Internet Gateway, and some ingress rules that allow anyone (0.0.0.0) to communicate with your server over ports 22 (ssh), 80 (HTTP), 443 (HTTPS), and 30000 (Foundry)
-outputs.tf:
-  - creates some data outputs
-provider.tf:
-  - uses the variables in oci-vars.tfvars to configure the OCI provider
-variables.tf:
-  - establishes all the user variables for the other files
-  
+That will generate a private key (`your-ssh-key-name`) and a public key (`your-ssh-key-name.pub`) that, as mentioned before, will be used by you later on when you want to access the server.
+
+Now you need to generate an aditional pair of keys for being able to communicate with the OCI API and being able to provide all the resources to your infrastructure. For that, you need to follow the following steps:
+
+1. Create the `.oci` directory, where you'll save your keys.
+```bash
+mkdir <your-home-directory>/.oci
+```
+*Note: (if you're using WSL, as on the official documentation mentions, it's recommend to create it on the Linux environment directly instead of a `/mnt/` one, so you don't need to tweak the permissions with `chmod` later on).*
+
+2. Generate a 2048-bit private key in a PEM format:
+```bash
+# Using ssh-keygen
+ssh-keygen -t rsa -b 2048 -m PEM -f <your-home-directory>/.oci/<your-rsa-key-name>.pem
+
+# Or using OpenSSL
+openssl genrsa -out <your-home-directory>/.oci/<your-rsa-key-name>.pem 2048 && \
+openssl rsa -pubout -in <your-home-directory>/.oci/<your-rsa-key-name>.pem -out $HOME/.oci<your-rsa-key-name>_public.pem
+```
+
+3. Change permissions, so only you can read and write to the private key file (important step. If not, your system will complain later on about the permissions not being strict enough).
+```bash
+chmod 600 <your-home-directory>/.oci/<your-rsa-key-name>.pem
+```
+
+Now, you'll need to add this public key to your user account. For that:
+- In the OCI Console's top navigation bar, click the Profile menu, and then go to User settings.
+- Click **API Keys**.
+- Click **Add API Key**.
+- Select **Paste Public Keys**.
+- Paste value from previous step, including the lines with `BEGIN PUBLIC KEY` and `END PUBLIC KEY`.
+- Click **Add**.
+
+**Save those values for now**, since they'll be used later and can't be seen again. You'll need to add again your API key if you lose this information.
+More information on the [official documentation page](https://docs.oracle.com/en-us/iaas/developer-tutorials/tutorials/tf-provider/01-summary.htm).
+
+### Preparing your .tfvars file
+
+#### Required changes
+- `tenancy_ocid`: your OCI tenancy OCID (values generated when added the API key).
+- `user_ocid`: your OCI user OCID (values generated when added the API key).
+- `fingerprint`: your OCI fingerprint (values generated when added the API key).
+- `rsa_private_key_path`: path to your RSA private key (`<your-home-directory>/.oci/<your-rsa-key-name>.pem`).
+- `region_identifier`: your tenant region ID (you can check either when added the API key or on `https://cloud.oracle.com/regions`). 
+- `ssh_public_key_path`: path to SSH public key that you will use to connect to your instance (the one we generated at the beginning).
+- `alert_rule_recipients`: email address to be notified if budget is exceeded
+
+#### Optional changes
+These are changes that you can customize based on your needs. The ones that are already present allow you to create up to two instances, using 50% of the allowed free resources on each one. I'm running some games with around 5 players and +100 active modules at the same time without any issues.
+
+- `compute_shape`: shape of an instance. Default one is `VM.Standard.A1.Flex`.
+- `instance_source_details_boot_volume_size_in_gbs`: boot volume size in GBs. Default one is `80`.
+- `memory_in_gbs`: total amount of memory in GBs. Default one is `12`.
+- `ocpus`: total amount of OCPUs available. Default one is `2`.
+- `image_id`: image that will be installed on the instance. Default one is `Ubuntu 20.04`. You can check others on [the official page](https://docs.oracle.com/en-us/iaas/images/). Be sure that it's supported for your compute shape.
+- `budget_amount`: maximum budget for the account in $. With the default configuration, it should be always free. Default is `1`.
+- `ingress_ports`: list of ports to allow through the security group. Default ones are `[22, 80, 443, 30000]`.
+
+#### Planning and running
+Once you have everything prepared, you'll only need to run the following commands:
+```bash
+# Initialize your Terraform project and download the OCI provider
+terraform init 
+
+# Start the provisioning
+terraform apply -var-file=my-oci-conf.tfvars
+```
+
+*Note: you'll need to answer "yes" once you execute the `apply` command to execute the changes.*
+
+# F.A.Q
+
+##### I receive an "out of capacity" error when trying to apply the changes
+
+It's normal. Depending on your region, getting Free Tier resources can be hard. However, the instance is the only thing that can give some errors. Everything else should be already created.
+If you're using bash, you can run the included `keeptrying.sh` (`Linux`) script or `keeptrying.ps1` (`Windows`), which will try to create the compute resource every 60 seconds and will continue until it finds the word `Apply` in the results, which will happen once your instance gets created.
+Be patient, since it can take from a few minutes to some hours.
+
+##### How do I connect to my instance?
+
+For connecting via SSH you'll need your instance IP. You can find it on [your instances](https://cloud.oracle.com/compute/instances) page. Also, the user may vary if you use a different image than `Ubuntu`.
+
+```bash
+ssh -i /path/to/your/private/key ubuntu@<instance_ip>
+
+# For example
+ssh -i ~/.ssh/foundry-ssh ubuntu@1.2.3.4
+```
+
 # Contact
-If you have questions you can reach out to me at Grimmortis#9673 on Discord.  
- 
+If you have questions you can reach out to me at **yoshi.png**.
+If you think there's something that can be improved, feel free to open a PR or add an issue to discuss it 🙂.
