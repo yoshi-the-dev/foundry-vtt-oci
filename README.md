@@ -1,17 +1,25 @@
-# OCI setup for Foundry VTT
+<h1 align="center">Foundry VTT OCI</h1> 
 
-# Why this
-This Terraform setup expects to provide an easy way to generate an automatic funcional cloud-hosted Foundry following the [official FoundryVTT team recomendations](https://foundryvtt.wiki/en/setup/hosting/always-free-oracle).
+<div align="center">
+  <img src="https://img.shields.io/badge/Terraform-7B42BC?style=for-the-badge&logo=terraform&logoColor=white" alt="Terraform badge"/>
+  <img src="https://img.shields.io/badge/Oracle-F80000?style=for-the-badge&logo=Oracle&logoColor=white" alt="Oracle badge"/>
+</div>
 
-### Credits
-Based on https://github.com/MrDionysus/foundry-vtt-oci-terraform implementation. Updated the values, improved the documentation for less-familiar users and added some other things like a volume backup system, the possibility of an automatic setup, and some other interesting configurable variables.
+<br>
+ 
+This Terraform setup expects to provide an easy way to automatically deploy a functional, free Oracle Cloud hosted instance following the [suggested specifications](https://foundryvtt.wiki/en/setup/hosting/always-free-oracle) for installing Foundry VTT on cloud.
 
-# Prerequisites
+### Credits [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+Based on https://github.com/MrDionysus/foundry-vtt-oci-terraform implementation.
+
+Updated the values, improved the documentation for less-familiar users and added some other things like a volume backup system, the possibility of an automatic setup, and some other interesting configurable variables.
+
+## Prerequisites
  - A valid license for [Foundry VTT](https://foundryvtt.com).
  - A new [Oracle OCI account](https://cloud.oracle.com).
  - A local installation of Terraform. Installation details can be found on the [official page](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli).
 
-# Usage
+## Usage
 Before starting, you need to clone this repo to your system.
 ```bash
 git clone https://github.com/yoshichulo/foundry-vtt-oci.git
@@ -66,7 +74,7 @@ More information on the [official documentation page](https://docs.oracle.com/en
 - `user_ocid`: your OCI user OCID (values generated when added the API key).
 - `fingerprint`: your OCI fingerprint (values generated when added the API key).
 - `rsa_private_key_path`: path to your RSA private key (`<your-home-directory>/.oci/<your-rsa-key-name>.pem`).
-- `region_identifier`: your tenant region ID (you can check either when added the API key or on `https://cloud.oracle.com/regions`). 
+- `region_identifier`: your tenant region ID (you can check either when added the API key or on [your regions page](https://cloud.oracle.com/regions)). 
 - `ssh_public_key_path`: path to SSH public key that you will use to connect to your instance (the one we generated at the beginning).
 - `alert_rule_recipients`: email address to be notified if budget is exceeded
 
@@ -88,20 +96,22 @@ Once you have everything prepared, you'll only need to run the following command
 terraform init 
 
 # Start the provisioning
-terraform apply -var-file=my-oci-conf.tfvars
+terraform apply -var-file=oci-vars.tfvars
 ```
 
 *Note: you'll need to answer "yes" once you execute the `apply` command to execute the changes.*
 
-# F.A.Q
+## F.A.Q
 
-##### I receive an "out of capacity" error when trying to apply the changes
+#### I receive an "out of capacity" error when trying to apply the changes
 
-It's normal. Depending on your region, getting Free Tier resources can be hard. However, the instance is the only thing that can give some errors. Everything else should be already created.
-If you're using bash, you can run the included `keeptrying.sh` (`Linux`) script or `keeptrying.ps1` (`Windows`), which will try to create the compute resource every 60 seconds and will continue until it finds the word `Apply` in the results, which will happen once your instance gets created.
+It's normal. Depending on your region, getting Free Tier resources can be hard. However, the instance is the only thing that may rise some errors. Everything else should be already created.
+
+You can run the included `keeptrying.sh` (`Linux`) script or `keeptrying.ps1` (`Windows`), which will try to create the compute resource every 60 seconds and will continue until it finds the word `Apply` in the results, which will happen once your instance gets created.
+
 Be patient, since it can take from a few minutes to some hours.
 
-##### How do I connect to my instance?
+#### How do I connect to my instance?
 
 For connecting via SSH you'll need your instance IP. You can find it on [your instances](https://cloud.oracle.com/compute/instances) page. Also, the user may vary if you use a different image than `Ubuntu`.
 
@@ -112,6 +122,7 @@ ssh -i /path/to/your/private/key ubuntu@<instance_ip>
 ssh -i ~/.ssh/foundry-ssh ubuntu@1.2.3.4
 ```
 
-# Contact
-If you have questions you can reach out to me at **yoshi.png**.
+## Contact
+If you have questions you can reach out to me at **yoshi.png** on Discord.
+
 If you think there's something that can be improved, feel free to open a PR or add an issue to discuss it 🙂.
