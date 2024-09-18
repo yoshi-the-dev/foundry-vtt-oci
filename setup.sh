@@ -10,9 +10,8 @@ sudo npm install pm2 -g && \
 pm2 startup && \
 sudo env PATH=$PATH:/usr/bin /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u ubuntu --hp /home/ubuntu && \
 mkdir ~/foundry && \
-wget --output-document ~/foundry/foundryvtt.zip "TEMPLINK" && \
-unzip ~/foundry/foundryvtt.zip -d ~/foundry && \
-rm -rf ~/foundry/foundryvtt.zip && \
+unzip ~/foundryvtt.zip -d ~/foundry && \
+rm -rf ~/foundryvtt.zip && \
 mkdir -p ~/foundryuserdata && \
 pm2 start "node /home/ubuntu/foundry/resources/app/main.js --dataPath=/home/ubuntu/foundryuserdata" --name foundry && \
 pm2 save

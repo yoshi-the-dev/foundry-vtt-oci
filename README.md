@@ -1,6 +1,10 @@
 <h1 align="center">Foundry VTT OCI</h1> 
 
 <div align="center">
+  <img src="./assets/fvtt-cc-text-sm.png" alt="Foundry VTT Community logo"/>
+</div>
+
+<div align="center">
   <img src="https://img.shields.io/badge/Terraform-7B42BC?style=for-the-badge&logo=terraform&logoColor=white" alt="Terraform badge"/>
   <img src="https://img.shields.io/badge/Oracle-F80000?style=for-the-badge&logo=Oracle&logoColor=white" alt="Oracle badge"/>
 </div>
@@ -48,7 +52,7 @@ ssh-keygen -t rsa -b 2048 -m PEM -f <your-home-directory>/.oci/<your-rsa-key-nam
 
 # Or using OpenSSL
 openssl genrsa -out <your-home-directory>/.oci/<your-rsa-key-name>.pem 2048 && \
-openssl rsa -pubout -in <your-home-directory>/.oci/<your-rsa-key-name>.pem -out $HOME/.oci<your-rsa-key-name>_public.pem
+openssl rsa -pubout -in <your-home-directory>/.oci/<your-rsa-key-name>.pem -out <your-home-directory>/.oci<your-rsa-key-name>_public.pem
 ```
 
 3. Change permissions, so only you can read and write to the private key file (important step. If not, your system will complain later on about the permissions not being strict enough).
@@ -89,7 +93,7 @@ These are changes that you can customize based on your needs. The ones that are 
 - `budget_amount`: maximum budget for the account in $. With the default configuration, it should be always free. Default is `1`.
 - `ingress_ports`: list of ports to allow through the security group. Default ones are `[22, 80, 443, 30000]`.
 
-#### Planning and running
+### Planning and running
 Once you have everything prepared, you'll only need to run the following commands:
 ```bash
 # Initialize your Terraform project and download the OCI provider
@@ -101,19 +105,47 @@ terraform apply -var-file=oci-vars.tfvars
 
 *Note: you'll need to answer "yes" once you execute the `apply` command to execute the changes.*
 
+### (Optional) Installation
+The point of this repository is the automatic provisioning of the infrastructure, but we've never talked about installation. That's because its steps may vary depending on the system
+you chose to use or it may be outdated because a new version with different dependencies was released.
+
+Nevertheless, I included a `setup.sh` script which automatically installs a `~/foundry.zip` ZIP file on an Ubuntu system. It was last tested on the 12.331 version.
+
+For using it, be sure to download first Foundry VTT Software from your licenses page to your personal computer. **Be sure to download the Linux/NodeJS version or it won't work**.
+
+After you did that, copy both the `.zip` file and `setup.sh` to your remote instance. You can use `scp` command.
+```bash
+scp -i /path/to/your/private/key /path/to/your/zip/file ubuntu@<instance_ip>:~/
+scp -i /path/to/your/private/key /path/to/your/setup/script ubuntu@<instance_ip>:~/
+```
+
+That will copy both files to your home directory on your instance. Now, you'll only need to connect to your instance and execute the script.
+```bash
+chmod +x ~/setup.sh
+sudo ~/setup.sh
+```
+*Note: this is just a script that sequentially runs all the commands on the [official setup page](https://foundryvtt.wiki/en/setup/hosting/always-free-oracle), and the steps may vary. Refer to the official documentation if there was any problem running the script of additional steps were needed.*
+
+If everything went well, you should have an instance of Foundry VTT running on `<instance_ip>:30000`.
+
 ## F.A.Q
 
 #### I receive an "out of capacity" error when trying to apply the changes
-
 It's normal. Depending on your region, getting Free Tier resources can be hard. However, the instance is the only thing that may rise some errors. Everything else should be already created.
 
 You can run the included `keeptrying.sh` (`Linux`) script or `keeptrying.ps1` (`Windows`), which will try to create the compute resource every 60 seconds and will continue until it finds the word `Apply` in the results, which will happen once your instance gets created.
 
 Be patient, since it can take from a few minutes to some hours.
 
-#### How do I connect to my instance?
+#### How do I know my instance public IP?
+You could see it by either checking it after the provisioning finishes, connecting to [your instances](https://cloud.oracle.com/compute/instances) dashboard an manually checking it, or by running:
 
-For connecting via SSH you'll need your instance IP. You can find it on [your instances](https://cloud.oracle.com/compute/instances) page. Also, the user may vary if you use a different image than `Ubuntu`.
+```bash
+terraform output instance_public_ip
+```
+
+#### How do I connect to my instance?
+You'll need first your instance public IP. After getting it, be sure to connect using the correct user. If you left the default system image, it will be `ubuntu`.
 
 ```bash
 ssh -i /path/to/your/private/key ubuntu@<instance_ip>
